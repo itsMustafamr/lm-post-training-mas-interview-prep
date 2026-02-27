@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SFT (Supervised Fine-Tuning) Training Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+model:
+  name: "distilgpt2"          # Small model — runs on free Colab T4
+  max_length: 256             # Max token length for inputs + labels
+  trust_remote_code: false
+
+lora:
+  enabled: true
+  r: 8                        # LoRA rank — lower = fewer params, less capacity
+  alpha: 16                   # Scaling factor: effective lr = alpha/r * lr
+  dropout: 0.05
+  target_modules:             # Which weight matrices to apply LoRA to
+    - "c_attn"
+    - "c_proj"
+  bias: "none"
+
+training:
+  output_dir: "./outputs/sft"
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 2   # Effective batch = 4 * 2 = 8
+  learning_rate: 2.0e-4
+  lr_scheduler_type: "cosine"
+  warmup_ratio: 0.03
+  weight_decay: 0.01
+  fp16: false                 # Set true on GPU
+  logging_steps: 10
+  save_steps: 100
+  seed: 42
+
+data:
+  dataset: "synthetic_math"   # Use synthetic data for demos
+  train_split: 0.9
+  val_split: 0.1
+  instruction_template: "### Instruction:\n{instruction}\n\n### Response:\n"
+  response_template: "{response}"
+
+output:
+  save_model: true
+  push_to_hub: false
