@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# GRPO (Group Relative Policy Optimization) Training Configuration
+# Used in DeepSeek-R1. Replaces PPO value function with group normalization.
+# Advantage: A_i = (r_i - mean(r_group)) / (std(r_group) + ε)
+# ─────────────────────────────────────────────────────────────────────────────
+
+model:
+  name: "distilgpt2"
+  max_length: 512
+  max_new_tokens: 256
+
+grpo:
+  group_size: 8               # G: number of completions sampled per prompt
+  epsilon_clip: 0.2           # PPO-style clipping for ratio π_θ/π_old
+  kl_coeff: 0.04              # β in KL penalty term
+  normalize_advantages: true  # Normalize within each group
+  advantage_epsilon: 1.0e-8   # Numerical stability in advantage normalization
+
+reward:
+  type: "verifiable"          # "verifiable" (binary) or "model" (reward model)
+  correct_reward: 1.0
+  incorrect_reward: 0.0
+  format_penalty: -0.5        # Penalty for malformed output format
+
+sampling:
+  temperature: 0.8            # Higher temperature → more diverse group samples
+  top_p: 0.95
+  do_sample: true
+
+training:
+  output_dir: "./outputs/grpo"
+  num_train_epochs: 2
+  per_device_train_batch_size: 1   # 1 problem × group_size completions
+  gradient_accumulation_steps: 8
+  learning_rate: 1.0e-5
+  lr_scheduler_type: "cosine"
+  warmup_ratio: 0.05
+  max_grad_norm: 1.0
+  fp16: false
+  logging_steps: 10
+  seed: 42
+
+data:
+  dataset: "gsm8k_sample"
+  max_problems: 100           # Small subset for demos
+
+output:
+  save_model: true
+  push_to_hub: false

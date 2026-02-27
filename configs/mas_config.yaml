@@ -1,0 +1,78 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Multi-Agent System (MAS) Configuration
+# Defines agent roles, communication topology, credit assignment settings
+# ─────────────────────────────────────────────────────────────────────────────
+
+agents:
+  solver:
+    role: "solver"
+    description: "Generates initial step-by-step solution to math problems"
+    temperature: 0.7
+    max_new_tokens: 256
+    system_prompt: >
+      You are an expert math solver. Solve problems step by step,
+      showing all reasoning. End with 'The answer is: [NUMBER]'.
+
+  critic:
+    role: "critic"
+    description: "Reviews solutions for logical errors and correctness"
+    temperature: 0.3          # Lower temperature for more deterministic critique
+    max_new_tokens: 128
+    system_prompt: >
+      You are a rigorous math critic. Review the given solution
+      for errors. Output VERDICT: CORRECT, INCORRECT, or UNCERTAIN
+      followed by your reasoning.
+
+  reviser:
+    role: "reviser"
+    description: "Revises solutions based on critic feedback"
+    temperature: 0.7
+    max_new_tokens: 256
+    system_prompt: >
+      You are a math reviser. Given a solution and critique,
+      produce a corrected solution addressing all identified errors.
+
+  verifier:
+    role: "verifier"
+    description: "Extracts and verifies the final numerical answer"
+    temperature: 0.1          # Very deterministic for extraction
+    max_new_tokens: 64
+    system_prompt: >
+      Extract the final numerical answer from the solution.
+      Output only: ANSWER: [NUMBER]
+
+pipeline:
+  topology: "sequential"      # Options: sequential, debate, mixture_of_agents
+  agent_order:
+    - "solver"
+    - "critic"
+    - "reviser"
+    - "verifier"
+  max_rounds: 3               # Max solver→critic→reviser cycles before stopping
+  convergence_criterion: "verifier_correct"
+
+debate:
+  num_agents: 3               # Number of debating agents
+  num_rounds: 3               # Rounds of debate
+  convergence_threshold: 0.67 # Fraction of agents that must agree to converge
+
+credit_assignment:
+  method: "shapley"           # Options: shapley, uniform, error_localization
+  shapley_samples: 100        # Monte Carlo samples for approximate Shapley
+  normalize: true
+
+logging:
+  enabled: true
+  log_dir: "./logs"
+  log_level: "INFO"
+  save_json: true
+  include_timestamps: true
+  include_token_counts: true
+
+evaluation:
+  benchmark: "gsm8k"
+  num_problems: 50
+  metrics:
+    - "accuracy"
+    - "convergence_rate"
+    - "error_correction_rate"
